@@ -8,9 +8,8 @@ GRID_SIZE = 8
 EMPTY = "."
 AGENT = "A"
 
-ROCK = "#"
+WALL = "#"
 FRAGILE_WALL = "X"
-TRAP = "!"
 SLIME = "S"
 SKELETON = "E"
 
@@ -38,9 +37,8 @@ def create_default_dungeon() -> Grid:
     Fe = ferro
     Cu = cobre
     Au = ouro
-    #  = rocha bloqueada
+    #  = parede comum
     X  = parede frágil
-    !  = armadilha
     S  = slime
     E  = esqueleto
 
@@ -50,13 +48,13 @@ def create_default_dungeon() -> Grid:
     """
     return [
         [AGENT, EMPTY, IRON, FRAGILE_WALL, GOLD, EMPTY, SLIME, EMPTY],
-        [EMPTY, ROCK, EMPTY, TRAP, EMPTY, EMPTY, EMPTY, COPPER],
-        [IRON, EMPTY, SLIME, EMPTY, FRAGILE_WALL, ROCK, EMPTY, EMPTY],
-        [EMPTY, EMPTY, EMPTY, GOLD, EMPTY, SKELETON, EMPTY, ROCK],
-        [ROCK, TRAP, EMPTY, EMPTY, EMPTY, EMPTY, IRON, EMPTY],
-        [EMPTY, EMPTY, FRAGILE_WALL, ROCK, SLIME, EMPTY, COPPER, EMPTY],
-        [GOLD, EMPTY, EMPTY, SKELETON, EMPTY, EMPTY, EMPTY, EMPTY],
-        [EMPTY, EMPTY, COPPER, EMPTY, EMPTY, TRAP, EMPTY, EMPTY],
+        [EMPTY, WALL, EMPTY, EMPTY, EMPTY, WALL, EMPTY, COPPER],
+        [IRON, EMPTY, SLIME, EMPTY, FRAGILE_WALL, WALL, EMPTY, EMPTY],
+        [EMPTY, WALL, WALL, GOLD, EMPTY, SKELETON, EMPTY, WALL],
+        [WALL, EMPTY, EMPTY, EMPTY, WALL, EMPTY, IRON, EMPTY],
+        [EMPTY, EMPTY, FRAGILE_WALL, WALL, SLIME, EMPTY, COPPER, EMPTY],
+        [GOLD, WALL, EMPTY, SKELETON, EMPTY, WALL, EMPTY, EMPTY],
+        [EMPTY, EMPTY, COPPER, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
     ]
 
 
@@ -98,10 +96,10 @@ def get_neighbors(position: Position) -> List[Position]:
     row, col = position
 
     possible_neighbors = [
-        (row - 1, col),  # cima
-        (row + 1, col),  # baixo
-        (row, col - 1),  # esquerda
-        (row, col + 1),  # direita
+        (row - 1, col),
+        (row + 1, col),
+        (row, col - 1),
+        (row, col + 1),
     ]
 
     valid_neighbors = []
@@ -136,14 +134,20 @@ def get_perceptions(grid: Grid, position: Position) -> List[str]:
     return perceptions
 
 
-def is_blocked(cell: str) -> bool:
+def is_blocked(cell: str, picareta_melhorada: bool = False) -> bool:
     """
     Verifica se uma célula bloqueia o caminho do agente.
 
-    Neste início, rochas e paredes frágeis são bloqueios.
-    Mais adiante, a parede frágil poderá ser quebrada com ferramenta.
+    Parede comum sempre bloqueia.
+    Parede frágil bloqueia apenas se o agente ainda não tiver picareta melhorada.
     """
-    return cell in [ROCK, FRAGILE_WALL]
+    if cell == WALL:
+        return True
+
+    if cell == FRAGILE_WALL and not picareta_melhorada:
+        return True
+
+    return False
 
 
 def is_ore(cell: str) -> bool:

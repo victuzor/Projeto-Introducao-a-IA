@@ -5,12 +5,19 @@ from src.dungeon import Grid, Position, get_cell, get_neighbors, is_blocked
 Action = Tuple[str, Position]
 
 
-def get_valid_moves(grid: Grid, position: Position) -> List[Action]:
+def get_valid_moves(
+    grid: Grid,
+    position: Position,
+    picareta_melhorada: bool = False,
+) -> List[Action]:
     """
     Retorna os movimentos válidos do agente a partir da posição atual.
 
     O agente pode se mover para cima, baixo, esquerda e direita,
     desde que a célula esteja dentro do mapa e não esteja bloqueada.
+
+    Parede comum sempre bloqueia.
+    Parede frágil só pode ser atravessada com picareta melhorada.
     """
     valid_moves = []
 
@@ -19,7 +26,7 @@ def get_valid_moves(grid: Grid, position: Position) -> List[Action]:
     for neighbor in neighbors:
         cell = get_cell(grid, neighbor)
 
-        if not is_blocked(cell):
+        if not is_blocked(cell, picareta_melhorada):
             action_name = get_action_name(position, neighbor)
             valid_moves.append((action_name, neighbor))
 
