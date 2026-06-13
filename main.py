@@ -3,7 +3,7 @@ from src.agent import aplicar_movimento
 from src.dungeon import create_default_dungeon, find_agent_position, get_perceptions
 from src.render import render_grid, render_perception_grid
 from src.score import calcular_score, formatar_score
-from src.search import busca_bfs, formatar_caminho, obter_proxima_posicao
+from src.search import busca_bfs, busca_ucs, formatar_caminho, obter_proxima_posicao
 from src.state import criar_estado_inicial
 
 
@@ -32,7 +32,15 @@ def main():
     print(f"Ações válidas na posição inicial: {acoes_validas}")
 
     objetivo = (0, 2)
+
     resultado_bfs = busca_bfs(
+        dungeon,
+        posicao_inicial=posicao_agente,
+        posicao_objetivo=objetivo,
+        picareta_melhorada=estado_agente.picareta_melhorada,
+    )
+
+    resultado_ucs = busca_ucs(
         dungeon,
         posicao_inicial=posicao_agente,
         posicao_objetivo=objetivo,
@@ -46,12 +54,19 @@ def main():
     print(f"Custo em passos: {resultado_bfs.custo}")
     print(f"Nós expandidos: {resultado_bfs.nos_expandidos}")
 
-    proxima_posicao = obter_proxima_posicao(resultado_bfs.caminho)
+    print("\nBusca UCS:")
+    print(f"Objetivo: {objetivo}")
+    print(f"Encontrou caminho: {resultado_ucs.encontrou}")
+    print(f"Caminho: {formatar_caminho(resultado_ucs.caminho)}")
+    print(f"Custo acumulado: {resultado_ucs.custo}")
+    print(f"Nós expandidos: {resultado_ucs.nos_expandidos}")
+
+    proxima_posicao = obter_proxima_posicao(resultado_ucs.caminho)
 
     if proxima_posicao is not None:
         novo_estado = aplicar_movimento(dungeon, estado_agente, proxima_posicao)
 
-        print("\nDemonstração de execução do primeiro movimento do BFS:")
+        print("\nDemonstração de execução do primeiro movimento do UCS:")
         print(f"Nova posição: {proxima_posicao}")
         print(f"Novo estado: {novo_estado}")
 

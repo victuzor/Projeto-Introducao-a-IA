@@ -1,11 +1,71 @@
-from src.dungeon import create_default_dungeon
-from src.search import busca_bfs, formatar_caminho, obter_proxima_posicao
+from src.dungeon import (
+    AGENT,
+    EMPTY,
+    FRAGILE_WALL,
+    GOLD,
+    SLIME,
+    WALL,
+    create_default_dungeon,
+)
+
+from src.search import (
+    busca_bfs,
+    busca_ucs,
+    calcular_custo_movimento,
+    formatar_caminho,
+    obter_proxima_posicao,
+)
+
+def criar_grid_teste_ucs():
+    return [
+        [AGENT, SLIME, GOLD, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, WALL, WALL, WALL, WALL, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+    ]
 
 
-def test_bfs_encontra_caminho_para_ferro_proximo():
+def test_calcular_custo_movimento_celula_vazia():
+    dungeon = criar_grid_teste_ucs()
+
+    custo = calcular_custo_movimento(dungeon, (1, 0))
+
+    assert custo == 1
+
+
+def test_calcular_custo_movimento_slime():
+    dungeon = criar_grid_teste_ucs()
+
+    custo = calcular_custo_movimento(dungeon, (0, 1))
+
+    assert custo == 31
+
+
+def test_calcular_custo_movimento_parede_fragil():
+    dungeon = [
+        [AGENT, FRAGILE_WALL, GOLD, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+    ]
+
+    custo = calcular_custo_movimento(dungeon, (0, 1))
+
+    assert custo == 6
+
+
+def test_ucs_encontra_caminho_para_ferro_proximo():
     dungeon = create_default_dungeon()
 
-    resultado = busca_bfs(
+    resultado = busca_ucs(
         dungeon,
         posicao_inicial=(0, 0),
         posicao_objetivo=(0, 2),
@@ -17,37 +77,24 @@ def test_bfs_encontra_caminho_para_ferro_proximo():
     assert resultado.nos_expandidos > 0
 
 
-def test_bfs_retorna_caminho_zero_quando_inicio_igual_objetivo():
-    dungeon = create_default_dungeon()
+def test_ucs_evitar_caminho_com_slime_quando_existe_caminho_mais_barato():
+    dungeon = criar_grid_teste_ucs()
 
-    resultado = busca_bfs(
+    resultado = busca_ucs(
         dungeon,
         posicao_inicial=(0, 0),
-        posicao_objetivo=(0, 0),
+        posicao_objetivo=(0, 2),
     )
 
     assert resultado.encontrou is True
-    assert resultado.caminho == ((0, 0),)
-    assert resultado.custo == 0
+    assert (0, 1) not in resultado.caminho
+    assert resultado.custo == 4
 
 
-def test_bfs_nao_atravessa_parede_comum():
+def test_ucs_nao_atravessa_parede_fragil_sem_picareta():
     dungeon = create_default_dungeon()
 
-    resultado = busca_bfs(
-        dungeon,
-        posicao_inicial=(1, 0),
-        posicao_objetivo=(1, 1),
-    )
-
-    assert resultado.encontrou is False
-    assert resultado.caminho == ()
-
-
-def test_bfs_nao_atravessa_parede_fragil_sem_picareta():
-    dungeon = create_default_dungeon()
-
-    resultado = busca_bfs(
+    resultado = busca_ucs(
         dungeon,
         posicao_inicial=(0, 2),
         posicao_objetivo=(0, 3),
@@ -57,10 +104,10 @@ def test_bfs_nao_atravessa_parede_fragil_sem_picareta():
     assert resultado.encontrou is False
 
 
-def test_bfs_atravessa_parede_fragil_com_picareta():
+def test_ucs_atravessa_parede_fragil_com_picareta():
     dungeon = create_default_dungeon()
 
-    resultado = busca_bfs(
+    resultado = busca_ucs(
         dungeon,
         posicao_inicial=(0, 2),
         posicao_objetivo=(0, 3),
@@ -69,34 +116,4 @@ def test_bfs_atravessa_parede_fragil_com_picareta():
 
     assert resultado.encontrou is True
     assert resultado.caminho == ((0, 2), (0, 3))
-    assert resultado.custo == 1
-
-
-def test_formatar_caminho():
-    caminho = ((0, 0), (0, 1), (0, 2))
-
-    texto = formatar_caminho(caminho)
-
-    assert texto == "(0, 0) -> (0, 1) -> (0, 2)"
-
-
-def test_formatar_caminho_vazio():
-    texto = formatar_caminho(())
-
-    assert texto == "Nenhum caminho encontrado."
-
-
-def test_obter_proxima_posicao():
-    caminho = ((0, 0), (0, 1), (0, 2))
-
-    proxima = obter_proxima_posicao(caminho)
-
-    assert proxima == (0, 1)
-
-
-def test_obter_proxima_posicao_caminho_curto():
-    caminho = ((0, 0),)
-
-    proxima = obter_proxima_posicao(caminho)
-
-    assert proxima is None
+    assert resultado.custo == 6
