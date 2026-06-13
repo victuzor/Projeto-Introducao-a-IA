@@ -9,9 +9,11 @@ from src.dungeon import (
 )
 
 from src.search import (
+    busca_a_estrela,
     busca_bfs,
     busca_ucs,
     calcular_custo_movimento,
+    calcular_heuristica_manhattan,
     formatar_caminho,
     obter_proxima_posicao,
 )
@@ -108,6 +110,76 @@ def test_ucs_atravessa_parede_fragil_com_picareta():
     dungeon = create_default_dungeon()
 
     resultado = busca_ucs(
+        dungeon,
+        posicao_inicial=(0, 2),
+        posicao_objetivo=(0, 3),
+        picareta_melhorada=True,
+    )
+
+    assert resultado.encontrou is True
+    assert resultado.caminho == ((0, 2), (0, 3))
+    assert resultado.custo == 6
+
+
+
+def test_calcular_heuristica_manhattan_mesma_posicao():
+    distancia = calcular_heuristica_manhattan((0, 0), (0, 0))
+
+    assert distancia == 0
+
+
+def test_calcular_heuristica_manhattan_posicoes_diferentes():
+    distancia = calcular_heuristica_manhattan((0, 0), (3, 4))
+
+    assert distancia == 7
+
+
+def test_a_estrela_encontra_caminho_para_ferro_proximo():
+    dungeon = create_default_dungeon()
+
+    resultado = busca_a_estrela(
+        dungeon,
+        posicao_inicial=(0, 0),
+        posicao_objetivo=(0, 2),
+    )
+
+    assert resultado.encontrou is True
+    assert resultado.caminho == ((0, 0), (0, 1), (0, 2))
+    assert resultado.custo == 2
+    assert resultado.nos_expandidos > 0
+
+
+def test_a_estrela_evitar_caminho_com_slime_quando_existe_caminho_mais_barato():
+    dungeon = criar_grid_teste_ucs()
+
+    resultado = busca_a_estrela(
+        dungeon,
+        posicao_inicial=(0, 0),
+        posicao_objetivo=(0, 2),
+    )
+
+    assert resultado.encontrou is True
+    assert (0, 1) not in resultado.caminho
+    assert resultado.custo == 4
+
+
+def test_a_estrela_nao_atravessa_parede_fragil_sem_picareta():
+    dungeon = create_default_dungeon()
+
+    resultado = busca_a_estrela(
+        dungeon,
+        posicao_inicial=(0, 2),
+        posicao_objetivo=(0, 3),
+        picareta_melhorada=False,
+    )
+
+    assert resultado.encontrou is False
+
+
+def test_a_estrela_atravessa_parede_fragil_com_picareta():
+    dungeon = create_default_dungeon()
+
+    resultado = busca_a_estrela(
         dungeon,
         posicao_inicial=(0, 2),
         posicao_objetivo=(0, 3),

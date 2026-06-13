@@ -48,6 +48,25 @@ def calcular_custo_movimento(grid: Grid, posicao_destino: Position) -> int:
     return custo
 
 
+def calcular_heuristica_manhattan(
+    posicao_atual: Position,
+    posicao_objetivo: Position,
+) -> int:
+    """
+    Calcula a distância de Manhattan entre duas posições.
+
+    Essa heurística considera apenas movimentos horizontais e verticais,
+    exatamente como o agente se move no grid.
+    """
+    linha_atual, coluna_atual = posicao_atual
+    linha_objetivo, coluna_objetivo = posicao_objetivo
+
+    distancia_linhas = abs(linha_atual - linha_objetivo)
+    distancia_colunas = abs(coluna_atual - coluna_objetivo)
+
+    return distancia_linhas + distancia_colunas
+
+
 def busca_bfs(
     grid: Grid,
     posicao_inicial: Position,
@@ -156,6 +175,93 @@ def busca_ucs(
                 heappush(
                     fila_prioridade,
                     (novo_custo, contador, proxima_posicao, novo_caminho),
+                )
+
+    return ResultadoBusca(
+        encontrou=False,
+        caminho=(),
+        custo=0,
+        nos_expandidos=nos_expandidos,
+    )
+
+
+def busca_a_estrela(
+    grid: Grid,
+    posicao_inicial: Position,
+    posicao_objetivo: Position,
+    picareta_melhorada: bool = False,
+) -> ResultadoBusca:
+    """
+    Executa A* para encontrar um caminho de baixo custo até o objetivo.
+
+    O A* usa:
+    f(n) = g(n) + h(n)
+
+    g(n) = custo acumulado até a posição atual
+    h(n) = estimativa de distância até o objetivo, usando Manhattan
+    """
+    fila_prioridade = []
+    melhores_custos = {posicao_inicial: 0}
+
+    contador = 0
+    prioridade_inicial = calcular_heuristica_manhattan(
+        posicao_inicial,
+        posicao_objetivo,
+    )
+
+    heappush(
+        fila_prioridade,
+        (prioridade_inicial, contador, 0, posicao_inicial, (posicao_inicial,)),
+    )
+
+    nos_expandidos = 0
+
+    while fila_prioridade:
+        _, _, custo_atual, posicao_atual, caminho_atual = heappop(fila_prioridade)
+
+        if custo_atual > melhores_custos.get(posicao_atual, float("inf")):
+            continue
+
+        nos_expandidos += 1
+
+        if posicao_atual == posicao_objetivo:
+            return ResultadoBusca(
+                encontrou=True,
+                caminho=caminho_atual,
+                custo=custo_atual,
+                nos_expandidos=nos_expandidos,
+            )
+
+        acoes_validas = get_valid_moves(
+            grid,
+            posicao_atual,
+            picareta_melhorada=picareta_melhorada,
+        )
+
+        for _, proxima_posicao in acoes_validas:
+            custo_movimento = calcular_custo_movimento(grid, proxima_posicao)
+            novo_custo = custo_atual + custo_movimento
+
+            if novo_custo < melhores_custos.get(proxima_posicao, float("inf")):
+                melhores_custos[proxima_posicao] = novo_custo
+                novo_caminho = caminho_atual + (proxima_posicao,)
+
+                heuristica = calcular_heuristica_manhattan(
+                    proxima_posicao,
+                    posicao_objetivo,
+                )
+                prioridade = novo_custo + heuristica
+
+                contador += 1
+                heappush(
+                    fila_prioridade,
+                    (
+                        prioridade,
+                        contador,
+                        novo_custo,
+                        proxima_posicao,
+                        novo_caminho,
+                    ),
                 )
 
     return ResultadoBusca(
