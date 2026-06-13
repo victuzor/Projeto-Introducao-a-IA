@@ -16,9 +16,6 @@ CUSTO_QUEBRAR_PAREDE_FRAGIL = 5
 
 @dataclass(frozen=True)
 class ResultadoBusca:
-    """
-    Guarda o resultado de um algoritmo de busca.
-    """
 
     encontrou: bool
     caminho: Caminho
@@ -27,16 +24,6 @@ class ResultadoBusca:
 
 
 def calcular_custo_movimento(grid: Grid, posicao_destino: Position) -> int:
-    """
-    Calcula o custo de entrar em uma célula.
-
-    Custo básico:
-    - Todo movimento custa 1.
-
-    Custos extras:
-    - Entrar em slime ou esqueleto adiciona penalidade.
-    - Entrar em parede frágil adiciona custo extra, simulando o esforço de quebrá-la.
-    """
     celula = get_cell(grid, posicao_destino)
 
     custo = CUSTO_MOVIMENTO_PADRAO
@@ -52,12 +39,6 @@ def calcular_heuristica_manhattan(
     posicao_atual: Position,
     posicao_objetivo: Position,
 ) -> int:
-    """
-    Calcula a distância de Manhattan entre duas posições.
-
-    Essa heurística considera apenas movimentos horizontais e verticais,
-    exatamente como o agente se move no grid.
-    """
     linha_atual, coluna_atual = posicao_atual
     linha_objetivo, coluna_objetivo = posicao_objetivo
 
@@ -73,12 +54,6 @@ def busca_bfs(
     posicao_objetivo: Position,
     picareta_melhorada: bool = False,
 ) -> ResultadoBusca:
-    """
-    Executa BFS para encontrar o menor caminho em quantidade de passos.
-
-    O BFS ignora diferenças de custo entre células.
-    Ele considera apenas a quantidade de movimentos necessários.
-    """
     fila = deque()
     visitados = set()
 
@@ -127,12 +102,6 @@ def busca_ucs(
     posicao_objetivo: Position,
     picareta_melhorada: bool = False,
 ) -> ResultadoBusca:
-    """
-    Executa UCS para encontrar o caminho de menor custo acumulado.
-
-    Diferente do BFS, o UCS considera que algumas células são mais caras:
-    slime, esqueleto e parede frágil.
-    """
     fila_prioridade = []
     melhores_custos = {posicao_inicial: 0}
 
@@ -191,15 +160,6 @@ def busca_a_estrela(
     posicao_objetivo: Position,
     picareta_melhorada: bool = False,
 ) -> ResultadoBusca:
-    """
-    Executa A* para encontrar um caminho de baixo custo até o objetivo.
-
-    O A* usa:
-    f(n) = g(n) + h(n)
-
-    g(n) = custo acumulado até a posição atual
-    h(n) = estimativa de distância até o objetivo, usando Manhattan
-    """
     fila_prioridade = []
     melhores_custos = {posicao_inicial: 0}
 
@@ -273,9 +233,6 @@ def busca_a_estrela(
 
 
 def formatar_caminho(caminho: Caminho) -> str:
-    """
-    Formata um caminho para exibição no terminal.
-    """
     if not caminho:
         return "Nenhum caminho encontrado."
 
@@ -283,11 +240,6 @@ def formatar_caminho(caminho: Caminho) -> str:
 
 
 def obter_proxima_posicao(caminho: Caminho) -> Optional[Position]:
-    """
-    Retorna a próxima posição após a posição inicial.
-
-    Se o caminho tiver apenas uma posição ou estiver vazio, retorna None.
-    """
     if len(caminho) < 2:
         return None
 

@@ -79,8 +79,6 @@ def test_get_neighbors_from_center():
 def test_perception_near_slime():
     dungeon = create_default_dungeon()
 
-    # No mapa padrão, existe um slime em (0, 6).
-    # Portanto, a posição (0, 5) deve perceber gosma.
     perceptions = get_perceptions(dungeon, (0, 5))
 
     assert GOO_PERCEPTION in perceptions
@@ -89,8 +87,6 @@ def test_perception_near_slime():
 def test_perception_near_skeleton():
     dungeon = create_default_dungeon()
 
-    # No mapa padrão, existe um esqueleto em (3, 5).
-    # Portanto, a posição (3, 4) deve perceber crack.
     perceptions = get_perceptions(dungeon, (3, 4))
 
     assert CRACK_PERCEPTION in perceptions

@@ -39,8 +39,6 @@ def test_valid_moves_from_initial_position():
 def test_blocked_cell_is_not_valid_move():
     dungeon = create_default_dungeon()
 
-    # A posição (1, 1) no mapa padrão é uma rocha "#".
-    # Saindo de (1, 0), o agente não pode se mover para a direita.
     valid_moves = get_valid_moves(dungeon, (1, 0))
 
     assert ("mover_direita", (1, 1)) not in valid_moves
@@ -48,7 +46,6 @@ def test_blocked_cell_is_not_valid_move():
 def test_parede_fragil_nao_e_movimento_valido_sem_picareta():
     dungeon = create_default_dungeon()
 
-    # No mapa padrão, existe parede frágil em (0, 3).
     valid_moves = get_valid_moves(dungeon, (0, 2), picareta_melhorada=False)
 
     assert ("mover_direita", (0, 3)) not in valid_moves
@@ -57,7 +54,6 @@ def test_parede_fragil_nao_e_movimento_valido_sem_picareta():
 def test_parede_fragil_e_movimento_valido_com_picareta():
     dungeon = create_default_dungeon()
 
-    # No mapa padrão, existe parede frágil em (0, 3).
     valid_moves = get_valid_moves(dungeon, (0, 2), picareta_melhorada=True)
 
     assert ("mover_direita", (0, 3)) in valid_moves

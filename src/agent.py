@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from src.dungeon import (
     Grid,
     Position,
@@ -13,6 +15,9 @@ from src.dungeon import (
 from src.state import EstadoAgente
 
 
+Caminho = Tuple[Position, ...]
+
+
 PENALIDADES_CELULAS = {
     SLIME: 30,
     SKELETON: 40,
@@ -20,21 +25,10 @@ PENALIDADES_CELULAS = {
 
 
 def calcular_penalidade_celula(celula: str) -> int:
-    """
-    Retorna a penalidade associada a uma célula.
-
-    Slimes e esqueletos causam penalidades.
-    Células vazias, paredes e minérios não causam penalidade.
-    """
     return PENALIDADES_CELULAS.get(celula, 0)
 
 
 def calcular_ferro_coletado(celula: str) -> int:
-    """
-    Retorna a quantidade de ferro coletada.
-
-    Por simplicidade, apenas o minério Fe aumenta o inventário de ferro.
-    """
     if celula == IRON:
         return 1
 
@@ -42,15 +36,6 @@ def calcular_ferro_coletado(celula: str) -> int:
 
 
 def aplicar_efeitos_celula(grid: Grid, estado: EstadoAgente) -> EstadoAgente:
-    """
-    Aplica os efeitos da célula atual no estado do agente.
-
-    Possíveis efeitos:
-    - coletar minério;
-    - ganhar dinheiro;
-    - ganhar ferro;
-    - sofrer penalidade.
-    """
     celula = get_cell(grid, estado.posicao)
     novo_estado = estado
 
@@ -77,11 +62,6 @@ def aplicar_movimento(
     estado: EstadoAgente,
     nova_posicao: Position,
 ) -> EstadoAgente:
-    """
-    Move o agente para uma nova posição e aplica os efeitos da célula de destino.
-
-    Caso a célula esteja bloqueada, o movimento não é permitido.
-    """
     celula_destino = get_cell(grid, nova_posicao)
 
     if is_blocked(celula_destino, estado.picareta_melhorada):
@@ -91,3 +71,27 @@ def aplicar_movimento(
     estado_atualizado = aplicar_efeitos_celula(grid, estado_movido)
 
     return estado_atualizado
+
+
+def executar_caminho(
+    grid: Grid,
+    estado_inicial: EstadoAgente,
+    caminho: Caminho,
+) -> EstadoAgente:
+
+    if not caminho:
+        return estado_inicial
+
+    if caminho[0] != estado_inicial.posicao:
+        raise ValueError("O caminho não começa na posição atual do agente.")
+
+    estado_atual = estado_inicial
+
+    for proxima_posicao in caminho[1:]:
+        estado_atual = aplicar_movimento(
+            grid=grid,
+            estado=estado_atual,
+            nova_posicao=proxima_posicao,
+        )
+
+    return estado_atual

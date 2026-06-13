@@ -9,9 +9,6 @@ from src.dungeon import (
 
 
 def render_grid(grid: Grid) -> None:
-    """
-    Exibe o mapa da dungeon no terminal.
-    """
     print("\nDungeon 8x8:")
     print("-" * 40)
 
@@ -27,13 +24,6 @@ def render_grid(grid: Grid) -> None:
 
 
 def render_perception_grid(grid: Grid) -> None:
-    """
-    Exibe um mapa separado mostrando onde existem percepções.
-
-    G  = gosma próxima, indicando slime vizinho
-    C  = crack próximo, indicando esqueleto vizinho
-    GC = gosma e crack na mesma célula
-    """
     print("\nMapa de percepções:")
     print("-" * 40)
 
