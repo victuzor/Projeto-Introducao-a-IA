@@ -27,6 +27,7 @@ def main():
         dungeon,
         posicao_agente,
         estado_agente.picareta_melhorada,
+        estado_agente.ferro,
     )
 
     render_grid(dungeon)
@@ -45,6 +46,7 @@ def main():
         dungeon,
         posicao_inicial=estado_agente.posicao,
         picareta_melhorada=estado_agente.picareta_melhorada,
+        ferro_disponivel=estado_agente.ferro,
         algoritmo="a_estrela",
     )
 
@@ -80,6 +82,7 @@ def main():
         [
             "BFS, UCS e A* serão executados lado a lado.",
             "Cada algoritmo tentará coletar minérios enquanto houver utilidade positiva.",
+            "Casas com gosma/crack agora geram custo de risco no score.",
         ],
     )
 
@@ -92,19 +95,21 @@ def main():
 
     for resultado_algoritmo in resultados_simulacao:
         resultado_missao = resultado_algoritmo.resultado_missao
+        estado_final = resultado_missao.estado_final
 
         render_painel(
             f"Resumo da Missão - {resultado_algoritmo.algoritmo}",
             [
                 f"Motivo da parada: {resultado_missao.motivo_parada}",
                 f"Quantidade de rotas executadas: {len(resultado_missao.planos_executados)}",
-                f"Minérios coletados: {resultado_missao.estado_final.minerios_coletados}",
-                f"Posição final: {resultado_missao.estado_final.posicao}",
-                f"Passos: {resultado_missao.estado_final.passos}",
-                f"Dinheiro: {resultado_missao.estado_final.dinheiro}",
-                f"Ferro: {resultado_missao.estado_final.ferro}",
-                f"Picareta melhorada: {resultado_missao.estado_final.picareta_melhorada}",
-                f"Penalidades: {resultado_missao.estado_final.penalidades}",
+                f"Minérios coletados: {estado_final.minerios_coletados}",
+                f"Posição final: {estado_final.posicao}",
+                f"Passos: {estado_final.passos}",
+                f"Dinheiro: {estado_final.dinheiro}",
+                f"Ferro: {estado_final.ferro}",
+                f"Picareta melhorada: {estado_final.picareta_melhorada}",
+                f"Penalidades: {estado_final.penalidades}",
+                f"Custo por risco: {estado_final.custo_risco}",
                 f"Score final: {resultado_missao.score.score_final}",
             ],
         )

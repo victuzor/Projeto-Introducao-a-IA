@@ -43,7 +43,8 @@ def test_executar_missao_coleta_minerios_enquanto_utilidade_positiva():
     assert resultado.estado_final.posicao == (0, 3)
     assert resultado.estado_final.passos == 3
     assert resultado.estado_final.dinheiro == 80
-    assert resultado.estado_final.picareta_melhorada is True
+    assert resultado.estado_final.ferro == 1
+    assert resultado.estado_final.picareta_melhorada is False
     assert resultado.estado_final.minerios_coletados == ((0, 1), (0, 2), (0, 3))
     assert resultado.score.score_final == 77
 

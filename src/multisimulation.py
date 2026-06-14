@@ -9,8 +9,8 @@ from rich.panel import Panel
 
 from src.agent import aplicar_movimento
 from src.dungeon import Grid
-from src.mission import PlanoRota, ResultadoMissao
-from src.planner import escolher_melhor_minerio
+from src.mission import ResultadoMissao
+from src.planner import PlanoRota, escolher_melhor_minerio
 from src.render import console, criar_tabela_grid
 from src.score import calcular_score
 from src.simulation import criar_grid_simulacao
@@ -69,9 +69,6 @@ def avancar_simulacao_algoritmo(
 ) -> EstadoSimulacaoAlgoritmo:
     """
     Avança um único passo da simulação de um algoritmo.
-
-    Se não houver plano atual, o algoritmo escolhe um novo minério.
-    Se houver plano atual, o agente anda uma posição no caminho.
     """
     if estado_simulacao.finalizado:
         return estado_simulacao
@@ -83,6 +80,7 @@ def avancar_simulacao_algoritmo(
             grid=grid,
             posicao_inicial=estado_atual.posicao,
             picareta_melhorada=estado_atual.picareta_melhorada,
+            ferro_disponivel=estado_atual.ferro,
             algoritmo=estado_simulacao.algoritmo,
             minerios_ignorados=estado_atual.minerios_coletados,
         )
@@ -133,11 +131,6 @@ def avancar_simulacao_algoritmo(
 
     if estado_simulacao.indice_proximo_passo >= len(caminho):
         estado_simulacao.logs.append(f"Coleta concluída em {novo_estado.posicao}")
-
-        if not novo_estado.picareta_melhorada and novo_estado.ferro >= 1:
-            estado_simulacao.estado_atual = novo_estado.melhorar_picareta()
-            estado_simulacao.logs.append("Picareta melhorada usando 1 ferro.")
-
         estado_simulacao.plano_atual = None
         estado_simulacao.indice_proximo_passo = 0
 
@@ -161,6 +154,7 @@ def criar_linhas_estado_algoritmo(
         f"Ferro: {estado.ferro}",
         f"Picareta: {picareta}",
         f"Penalidades: {estado.penalidades}",
+        f"Custo risco: {estado.custo_risco}",
         f"Score: {score.score_final}",
         f"Coletas: {len(estado.minerios_coletados)}",
     ]

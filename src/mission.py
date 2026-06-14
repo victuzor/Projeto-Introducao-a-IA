@@ -50,6 +50,7 @@ def executar_missao_coleta(
             grid=grid,
             posicao_inicial=estado_atual.posicao,
             picareta_melhorada=estado_atual.picareta_melhorada,
+            ferro_disponivel=estado_atual.ferro,
             algoritmo=algoritmo,
             minerios_ignorados=estado_atual.minerios_coletados,
         )
@@ -73,9 +74,6 @@ def executar_missao_coleta(
             estado_inicial=estado_atual,
             caminho=plano.resultado_busca.caminho,
         )
-
-        if not estado_atual.picareta_melhorada and estado_atual.ferro >= 1:
-            estado_atual = estado_atual.melhorar_picareta()
 
         planos_executados.append(plano)
 

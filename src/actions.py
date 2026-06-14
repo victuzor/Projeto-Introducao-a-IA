@@ -9,8 +9,18 @@ def get_valid_moves(
     grid: Grid,
     position: Position,
     picareta_melhorada: bool = False,
+    ferro_disponivel: int = 0,
 ) -> List[Action]:
+    """
+    Retorna os movimentos válidos do agente a partir da posição atual.
 
+    O agente pode se mover para cima, baixo, esquerda e direita,
+    desde que a célula esteja dentro do mapa e não esteja bloqueada.
+
+    Parede comum sempre bloqueia.
+    Parede frágil pode ser atravessada se o agente já tiver picareta melhorada
+    ou se tiver ferro suficiente para melhorá-la.
+    """
     valid_moves = []
 
     neighbors = get_neighbors(position)
@@ -18,7 +28,7 @@ def get_valid_moves(
     for neighbor in neighbors:
         cell = get_cell(grid, neighbor)
 
-        if not is_blocked(cell, picareta_melhorada):
+        if not is_blocked(cell, picareta_melhorada, ferro_disponivel):
             action_name = get_action_name(position, neighbor)
             valid_moves.append((action_name, neighbor))
 
@@ -26,6 +36,9 @@ def get_valid_moves(
 
 
 def get_action_name(current_position: Position, next_position: Position) -> str:
+    """
+    Retorna o nome da ação com base na posição atual e na próxima posição.
+    """
     current_row, current_col = current_position
     next_row, next_col = next_position
 

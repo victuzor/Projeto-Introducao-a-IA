@@ -64,6 +64,7 @@ def escolher_melhor_minerio(
     grid: Grid,
     posicao_inicial: Position,
     picareta_melhorada: bool = False,
+    ferro_disponivel: int = 0,
     algoritmo: str = "a_estrela",
     minerios_ignorados: Minerios = (),
 ) -> Optional[PlanoRota]:
@@ -94,6 +95,7 @@ def escolher_melhor_minerio(
             posicao_inicial=posicao_inicial,
             posicao_objetivo=posicao_minerio,
             picareta_melhorada=picareta_melhorada,
+            ferro_inicial=ferro_disponivel,
         )
 
         if not resultado.encontrou:

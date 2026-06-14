@@ -28,6 +28,24 @@ ORE_VALUES = {
 
 
 def create_default_dungeon() -> Grid:
+    """
+    Cria um mapa fixo 8x8 para facilitar os testes e a comparação dos algoritmos.
+
+    Símbolos:
+    A  = agente
+    .  = célula vazia
+    Fe = ferro
+    Cu = cobre
+    Au = ouro
+    #  = parede comum
+    X  = parede frágil
+    S  = slime
+    E  = esqueleto
+
+    Percepções:
+    gosma = existe slime em uma célula vizinha
+    crack = existe esqueleto em uma célula vizinha
+    """
     return [
         [AGENT, EMPTY, IRON, FRAGILE_WALL, GOLD, EMPTY, SLIME, EMPTY],
         [EMPTY, WALL, EMPTY, EMPTY, EMPTY, WALL, EMPTY, COPPER],
@@ -41,7 +59,9 @@ def create_default_dungeon() -> Grid:
 
 
 def find_agent_position(grid: Grid) -> Position:
-
+    """
+    Encontra a posição inicial do agente no mapa.
+    """
     for row_index, row in enumerate(grid):
         for col_index, cell in enumerate(row):
             if cell == AGENT:
@@ -51,16 +71,28 @@ def find_agent_position(grid: Grid) -> Position:
 
 
 def is_inside_grid(position: Position) -> bool:
+    """
+    Verifica se uma posição está dentro dos limites da dungeon.
+    """
     row, col = position
     return 0 <= row < GRID_SIZE and 0 <= col < GRID_SIZE
 
 
 def get_cell(grid: Grid, position: Position) -> str:
+    """
+    Retorna o conteúdo de uma célula do mapa.
+    """
     row, col = position
     return grid[row][col]
 
 
 def get_neighbors(position: Position) -> List[Position]:
+    """
+    Retorna as posições vizinhas válidas.
+
+    Consideramos apenas cima, baixo, esquerda e direita.
+    Não consideramos diagonais.
+    """
     row, col = position
 
     possible_neighbors = [
@@ -80,6 +112,12 @@ def get_neighbors(position: Position) -> List[Position]:
 
 
 def get_perceptions(grid: Grid, position: Position) -> List[str]:
+    """
+    Retorna as percepções da posição atual.
+
+    Se houver slime em uma célula vizinha, retorna 'gosma'.
+    Se houver esqueleto em uma célula vizinha, retorna 'crack'.
+    """
     perceptions = []
 
     neighbors = get_neighbors(position)
@@ -96,19 +134,37 @@ def get_perceptions(grid: Grid, position: Position) -> List[str]:
     return perceptions
 
 
-def is_blocked(cell: str, picareta_melhorada: bool = False) -> bool:
+def is_blocked(
+    cell: str,
+    picareta_melhorada: bool = False,
+    ferro_disponivel: int = 0,
+) -> bool:
+    """
+    Verifica se uma célula bloqueia o caminho do agente.
+
+    Parede comum sempre bloqueia.
+    Parede frágil bloqueia se o agente não tiver picareta melhorada
+    e também não tiver ferro para melhorá-la.
+    """
     if cell == WALL:
         return True
 
-    if cell == FRAGILE_WALL and not picareta_melhorada:
-        return True
+    if cell == FRAGILE_WALL:
+        return not picareta_melhorada and ferro_disponivel < 1
 
     return False
 
 
 def is_ore(cell: str) -> bool:
+    """
+    Verifica se uma célula contém minério.
+    """
     return cell in ORE_VALUES
 
 
 def get_ore_value(cell: str) -> int:
+    """
+    Retorna o valor de um minério.
+    Caso a célula não seja minério, retorna 0.
+    """
     return ORE_VALUES.get(cell, 0)

@@ -9,17 +9,17 @@ from src.agent import (
 )
 
 from src.dungeon import (
-    IRON,
-    GOLD,
-    SLIME,
-    SKELETON,
     EMPTY,
-    WALL,
     FRAGILE_WALL,
+    GOLD,
+    IRON,
+    SKELETON,
+    SLIME,
+    WALL,
     create_default_dungeon,
 )
 
-from src.state import criar_estado_inicial, EstadoAgente
+from src.state import EstadoAgente, criar_estado_inicial
 
 
 def test_calcular_penalidade_celula_vazia():
@@ -50,7 +50,7 @@ def test_aplicar_movimento_incrementa_passos():
     assert novo_estado.caminho == ((0, 0), (0, 1))
 
 
-def test_aplicar_movimento_coleta_ferro():
+def test_aplicar_movimento_coleta_ferro_sem_melhorar_picareta():
     dungeon = create_default_dungeon()
     estado = criar_estado_inicial((0, 1))
 
@@ -60,6 +60,7 @@ def test_aplicar_movimento_coleta_ferro():
     assert novo_estado.passos == 1
     assert novo_estado.dinheiro == 10
     assert novo_estado.ferro == 1
+    assert novo_estado.picareta_melhorada is False
     assert novo_estado.minerios_coletados == ((0, 2),)
 
 
@@ -115,7 +116,7 @@ def test_aplicar_movimento_em_parede_comum_gera_erro():
         aplicar_movimento(dungeon, estado, (1, 1))
 
 
-def test_aplicar_movimento_em_parede_fragil_sem_picareta_gera_erro():
+def test_aplicar_movimento_em_parede_fragil_sem_ferro_gera_erro():
     dungeon = create_default_dungeon()
     estado = criar_estado_inicial((0, 2))
 
@@ -146,6 +147,7 @@ def test_parede_comum_nao_tem_penalidade():
 def test_parede_fragil_nao_tem_penalidade():
     assert calcular_penalidade_celula(FRAGILE_WALL) == 0
 
+
 def test_executar_caminho_vazio_retorna_estado_inicial():
     dungeon = create_default_dungeon()
     estado = criar_estado_inicial((0, 0))
@@ -164,7 +166,7 @@ def test_executar_caminho_com_apenas_posicao_inicial():
     assert estado_final == estado
 
 
-def test_executar_caminho_coleta_ferro():
+def test_executar_caminho_coleta_ferro_sem_melhorar_picareta():
     dungeon = create_default_dungeon()
     estado = criar_estado_inicial((0, 0))
 
@@ -175,6 +177,7 @@ def test_executar_caminho_coleta_ferro():
     assert estado_final.passos == 2
     assert estado_final.dinheiro == 10
     assert estado_final.ferro == 1
+    assert estado_final.picareta_melhorada is False
     assert estado_final.minerios_coletados == ((0, 2),)
     assert estado_final.caminho == caminho
 
@@ -197,3 +200,36 @@ def test_executar_caminho_bloqueado_gera_erro():
 
     with pytest.raises(ValueError):
         executar_caminho(dungeon, estado, caminho)
+
+
+def test_agente_so_melhora_picareta_ao_entrar_em_parede_fragil():
+    dungeon = create_default_dungeon()
+    estado = criar_estado_inicial((0, 0))
+
+    estado = aplicar_movimento(dungeon, estado, (0, 1))
+    estado = aplicar_movimento(dungeon, estado, (0, 2))
+
+    assert estado.ferro == 1
+    assert estado.picareta_melhorada is False
+
+    estado = aplicar_movimento(dungeon, estado, (0, 3))
+
+    assert estado.ferro == 0
+    assert estado.picareta_melhorada is True
+    assert estado.posicao == (0, 3)
+
+
+def test_executar_caminho_coleta_ferro_e_atravessa_parede_fragil():
+    dungeon = create_default_dungeon()
+    estado = criar_estado_inicial((0, 0))
+
+    caminho = ((0, 0), (0, 1), (0, 2), (0, 3), (0, 4))
+
+    estado_final = executar_caminho(dungeon, estado, caminho)
+
+    assert estado_final.posicao == (0, 4)
+    assert estado_final.passos == 4
+    assert estado_final.dinheiro == 60
+    assert estado_final.ferro == 0
+    assert estado_final.picareta_melhorada is True
+    assert estado_final.minerios_coletados == ((0, 2), (0, 4))

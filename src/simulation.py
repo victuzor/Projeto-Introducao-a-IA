@@ -25,11 +25,6 @@ def criar_grid_simulacao(
 ) -> Grid:
     """
     Cria uma versão visual do mapa para a simulação.
-
-    - Remove o agente da posição inicial fixa do mapa.
-    - Marca o caminho percorrido com '*'.
-    - Marca a posição atual do agente com 'A'.
-    - Mostra o caminho planejado até o alvo.
     """
     grid_visual = [linha.copy() for linha in grid]
 
@@ -68,7 +63,6 @@ def criar_linhas_estado(estado: EstadoAgente) -> list[str]:
     Cria linhas de texto com o estado atual do agente.
     """
     score = calcular_score(estado)
-
     picareta = "melhorada" if estado.picareta_melhorada else "básica"
 
     return [
@@ -78,6 +72,7 @@ def criar_linhas_estado(estado: EstadoAgente) -> list[str]:
         f"Ferro: {estado.ferro}",
         f"Picareta: {picareta}",
         f"Penalidades: {estado.penalidades}",
+        f"Custo risco: {estado.custo_risco}",
         f"Score parcial: {score.score_final}",
         f"Minérios coletados: {len(estado.minerios_coletados)}",
     ]
@@ -127,12 +122,10 @@ def simular_missao_visual(
     algoritmo: str = "a_estrela",
     utilidade_minima: int = 1,
     max_coletas: int = 20,
-    delay: float = 0.4,
+    delay: float = 0.8,
 ) -> ResultadoMissao:
     """
     Executa visualmente a missão de coleta de múltiplos minérios.
-
-    O agente continua coletando enquanto a próxima rota tiver utilidade positiva.
     """
     estado_atual = estado_inicial
     planos_executados: list[PlanoRota] = []
@@ -153,6 +146,7 @@ def simular_missao_visual(
                 grid=grid,
                 posicao_inicial=estado_atual.posicao,
                 picareta_melhorada=estado_atual.picareta_melhorada,
+                ferro_disponivel=estado_atual.ferro,
                 algoritmo=algoritmo,
                 minerios_ignorados=estado_atual.minerios_coletados,
             )
@@ -193,6 +187,7 @@ def simular_missao_visual(
                 ),
                 refresh=True,
             )
+
             sleep(delay)
 
             for proxima_posicao in plano.resultado_busca.caminho[1:]:
@@ -213,16 +208,7 @@ def simular_missao_visual(
                     ),
                     refresh=True,
                 )
-                sleep(delay)
 
-            if not estado_atual.picareta_melhorada and estado_atual.ferro >= 1:
-                estado_atual = estado_atual.melhorar_picareta()
-                logs.append("Picareta melhorada usando 1 ferro.")
-
-                live.update(
-                    criar_tela_simulacao(grid, estado_atual, logs=logs),
-                    refresh=True,
-                )
                 sleep(delay)
 
         else:
