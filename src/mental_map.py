@@ -26,6 +26,8 @@ SUSPECT_SLIME = "G"
 SUSPECT_SKELETON = "C"
 SUSPECT_BOTH = "GC"
 
+CUSTO_CELULA_DESCONHECIDA = 1
+
 Positions = Tuple[Position, ...]
 KnownCells = Tuple[Tuple[str, ...], ...]
 
@@ -43,6 +45,9 @@ class MapaMental:
     Paredes e paredes frágeis são descobertas por observação local.
     Slimes e esqueletos não são revelados diretamente; eles são inferidos
     por percepções de gosma e crack.
+
+    Se o agente pisa em um monstro, ele passa a conhecer aquela célula
+    e evita passar por ela novamente.
     """
 
     celulas_conhecidas: KnownCells
@@ -99,9 +104,9 @@ def _deve_marcar_suspeita(celula_conhecida: str) -> bool:
     """
     Verifica se uma célula pode receber suspeita de monstro.
 
-    Paredes não recebem suspeita porque não são atravessáveis.
+    Paredes e monstros já conhecidos não recebem suspeita.
     """
-    return celula_conhecida not in (WALL, FRAGILE_WALL)
+    return celula_conhecida not in (WALL, FRAGILE_WALL, SLIME, SKELETON)
 
 
 def criar_mapa_mental_inicial(
@@ -146,6 +151,7 @@ def atualizar_mapa_mental(
     - vizinhos são observados localmente;
     - paredes e paredes frágeis são reveladas se estiverem adjacentes;
     - monstros adjacentes não são revelados diretamente;
+    - se o agente pisa em um monstro, essa célula passa a ser conhecida;
     - gosma/crack marcam vizinhos como suspeitos.
     """
     grid_mental = _copiar_grid(mapa_mental.celulas_conhecidas)
@@ -211,8 +217,12 @@ def criar_grid_planejamento(mapa_mental: MapaMental) -> Grid:
     Cria um grid para os algoritmos de busca.
 
     Células desconhecidas são tratadas como livres, pois o agente ainda não
-    sabe que ali pode existir parede ou monstro. Paredes conhecidas continuam
-    bloqueando o caminho.
+    sabe que ali pode existir parede ou monstro.
+
+    Paredes conhecidas bloqueiam o caminho.
+
+    Monstros conhecidos também bloqueiam o caminho, pois o agente já aprendeu
+    que passar por aquela célula causa penalidade.
     """
     grid_planejamento = []
 
@@ -223,7 +233,7 @@ def criar_grid_planejamento(mapa_mental: MapaMental) -> Grid:
             if celula == UNKNOWN:
                 linha_planejamento.append(EMPTY)
             elif celula in (SLIME, SKELETON):
-                linha_planejamento.append(EMPTY)
+                linha_planejamento.append(WALL)
             else:
                 linha_planejamento.append(celula)
 
@@ -236,11 +246,26 @@ def calcular_custos_risco_mapa_mental(
     mapa_mental: MapaMental,
 ) -> Dict[Position, int]:
     """
-    Cria uma tabela de custos extras baseada nas suspeitas do mapa mental.
+    Cria uma tabela de custos extras baseada no mapa mental.
 
-    Esse custo é usado por UCS e A*. O BFS ignora custos por definição.
+    UCS e A* usam esse custo para tomar decisões mais cautelosas.
+
+    Custos considerados:
+    - célula desconhecida: custo leve de incerteza;
+    - suspeita de slime: custo de gosma;
+    - suspeita de esqueleto: custo de crack.
+
+    O BFS ignora esses custos por definição.
     """
     custos: Dict[Position, int] = {}
+
+    for linha_indice, linha in enumerate(mapa_mental.celulas_conhecidas):
+        for coluna_indice, celula in enumerate(linha):
+            if celula == UNKNOWN:
+                custos[(linha_indice, coluna_indice)] = (
+                    custos.get((linha_indice, coluna_indice), 0)
+                    + CUSTO_CELULA_DESCONHECIDA
+                )
 
     for posicao in mapa_mental.suspeita_slime:
         custos[posicao] = custos.get(posicao, 0) + CUSTO_PERCEPCAO_GOSMA

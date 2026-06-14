@@ -1,5 +1,16 @@
-from src.dungeon import AGENT, EMPTY, FRAGILE_WALL, GOLD, IRON, create_default_dungeon
+from src.dungeon import (
+    AGENT,
+    EMPTY,
+    FRAGILE_WALL,
+    GOLD,
+    IRON,
+    SKELETON,
+    SLIME,
+    WALL,
+    create_default_dungeon,
+)
 from src.mental_map import (
+    CUSTO_CELULA_DESCONHECIDA,
     SUSPECT_SLIME,
     UNKNOWN,
     atualizar_mapa_mental,
@@ -9,6 +20,7 @@ from src.mental_map import (
     criar_grid_visual_mapa_mental,
     criar_mapa_mental_inicial,
 )
+from src.risk import CUSTO_PERCEPCAO_GOSMA
 
 
 def test_mapa_mental_inicial_conhece_minerios_e_posicao_inicial():
@@ -39,6 +51,24 @@ def test_atualizar_mapa_mental_revela_parede_adjacente():
     assert mapa.celulas_conhecidas[1][2] == EMPTY
 
 
+def test_atualizar_mapa_mental_revela_slime_quando_agente_pisa_nele():
+    dungeon = create_default_dungeon()
+    mapa = criar_mapa_mental_inicial(dungeon, (0, 0))
+
+    mapa = atualizar_mapa_mental(mapa, dungeon, (0, 6))
+
+    assert mapa.celulas_conhecidas[0][6] == SLIME
+
+
+def test_atualizar_mapa_mental_revela_esqueleto_quando_agente_pisa_nele():
+    dungeon = create_default_dungeon()
+    mapa = criar_mapa_mental_inicial(dungeon, (0, 0))
+
+    mapa = atualizar_mapa_mental(mapa, dungeon, (3, 5))
+
+    assert mapa.celulas_conhecidas[3][5] == SKELETON
+
+
 def test_criar_grid_planejamento_trata_desconhecido_como_livre():
     dungeon = create_default_dungeon()
     mapa = criar_mapa_mental_inicial(dungeon, (0, 0))
@@ -46,6 +76,45 @@ def test_criar_grid_planejamento_trata_desconhecido_como_livre():
     grid_planejamento = criar_grid_planejamento(mapa)
 
     assert grid_planejamento[0][6] == EMPTY
+
+
+def test_criar_grid_planejamento_bloqueia_slime_conhecido():
+    dungeon = create_default_dungeon()
+    mapa = criar_mapa_mental_inicial(dungeon, (0, 0))
+    mapa = atualizar_mapa_mental(mapa, dungeon, (0, 6))
+
+    grid_planejamento = criar_grid_planejamento(mapa)
+
+    assert grid_planejamento[0][6] == WALL
+
+
+def test_criar_grid_planejamento_bloqueia_esqueleto_conhecido():
+    dungeon = create_default_dungeon()
+    mapa = criar_mapa_mental_inicial(dungeon, (0, 0))
+    mapa = atualizar_mapa_mental(mapa, dungeon, (3, 5))
+
+    grid_planejamento = criar_grid_planejamento(mapa)
+
+    assert grid_planejamento[3][5] == WALL
+
+
+def test_calcular_custos_risco_mapa_mental_tem_custo_para_desconhecido():
+    dungeon = create_default_dungeon()
+    mapa = criar_mapa_mental_inicial(dungeon, (0, 0))
+
+    custos = calcular_custos_risco_mapa_mental(mapa)
+
+    assert custos[(0, 6)] == CUSTO_CELULA_DESCONHECIDA
+
+
+def test_calcular_custos_risco_mapa_mental_acumula_incerteza_e_suspeita():
+    dungeon = create_default_dungeon()
+    mapa = criar_mapa_mental_inicial(dungeon, (0, 0))
+    mapa = atualizar_mapa_mental(mapa, dungeon, (0, 5))
+
+    custos = calcular_custos_risco_mapa_mental(mapa)
+
+    assert custos[(0, 6)] == CUSTO_CELULA_DESCONHECIDA + CUSTO_PERCEPCAO_GOSMA
 
 
 def test_calcular_custos_risco_mapa_mental():
