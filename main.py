@@ -1,17 +1,24 @@
 from src.actions import get_valid_moves
 from src.agent import executar_caminho
-from src.comparison import comparar_algoritmos, formatar_resultado_comparacao
+from src.comparison import comparar_algoritmos
 from src.dungeon import create_default_dungeon, find_agent_position, get_perceptions
 from src.planner import escolher_melhor_minerio
-from src.render import render_grid, render_perception_grid
+from src.render import (
+    render_comparacao_algoritmos,
+    render_grid,
+    render_painel,
+    render_perception_grid,
+    render_route_grid,
+    render_score_final,
+    render_titulo,
+)
 from src.score import calcular_score, formatar_score
 from src.search import formatar_caminho
 from src.state import criar_estado_inicial
 
 
 def main():
-    print("uAI Dungeon Miner")
-    print("Projeto iniciado com sucesso.")
+    render_titulo()
 
     dungeon = create_default_dungeon()
 
@@ -28,10 +35,15 @@ def main():
     render_grid(dungeon)
     render_perception_grid(dungeon)
 
-    print(f"Estado inicial do agente: {estado_agente}")
-    print(f"Posição inicial do agente: {posicao_agente}")
-    print(f"Percepções na posição inicial: {percepcoes}")
-    print(f"Ações válidas na posição inicial: {acoes_validas}")
+    render_painel(
+        "Estado Inicial",
+        [
+            f"Estado do agente: {estado_agente}",
+            f"Posição inicial: {posicao_agente}",
+            f"Percepções iniciais: {percepcoes}",
+            f"Ações válidas iniciais: {acoes_validas}",
+        ],
+    )
 
     plano = escolher_melhor_minerio(
         dungeon,
@@ -41,16 +53,25 @@ def main():
     )
 
     if plano is None:
-        print("\nNenhum minério acessível foi encontrado.")
+        render_painel(
+            "Planejador de Rotas",
+            ["Nenhum minério acessível foi encontrado."],
+        )
         return
 
-    print("\nPlanejador de rotas:")
-    print(f"Melhor alvo escolhido: {plano.alvo}")
-    print(f"Valor do minério: {plano.valor_alvo}")
-    print(f"Utilidade estimada: {plano.utilidade_estimada}")
-    print(f"Caminho planejado: {formatar_caminho(plano.resultado_busca.caminho)}")
+    render_painel(
+        "Planejador de Rotas",
+        [
+            "Algoritmo usado: A*",
+            f"Melhor alvo escolhido: {plano.alvo}",
+            f"Valor do minério: {plano.valor_alvo}",
+            f"Utilidade estimada: {plano.utilidade_estimada}",
+            f"Caminho planejado: {formatar_caminho(plano.resultado_busca.caminho)}",
+        ],
+    )
 
-    print("\nComparação dos algoritmos:")
+    render_route_grid(dungeon, plano.resultado_busca.caminho)
+
     resultados = comparar_algoritmos(
         grid=dungeon,
         posicao_inicial=estado_agente.posicao,
@@ -58,10 +79,7 @@ def main():
         picareta_melhorada=estado_agente.picareta_melhorada,
     )
 
-    for resultado in resultados:
-        print()
-        print(formatar_resultado_comparacao(resultado))
-        print(f"Caminho: {formatar_caminho(resultado.caminho)}")
+    render_comparacao_algoritmos(resultados, formatar_caminho)
 
     estado_final = executar_caminho(
         grid=dungeon,
@@ -71,11 +89,15 @@ def main():
 
     resultado_score = calcular_score(estado_final)
 
-    print("\nExecução da rota escolhida pelo planejador:")
-    print(f"Estado final: {estado_final}")
+    render_painel(
+        "Execução da Rota Escolhida",
+        [
+            f"Estado final: {estado_final}",
+            f"Caminho executado: {formatar_caminho(plano.resultado_busca.caminho)}",
+        ],
+    )
 
-    print("\nScore final da rota:")
-    print(formatar_score(resultado_score))
+    render_score_final(formatar_score(resultado_score))
 
 
 if __name__ == "__main__":
