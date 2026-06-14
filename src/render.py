@@ -21,6 +21,7 @@ from src.dungeon import (
     WALL,
     get_perceptions,
 )
+from src.mental_map import SUSPECT_BOTH, SUSPECT_SKELETON, SUSPECT_SLIME, UNKNOWN
 
 
 console = Console()
@@ -62,6 +63,18 @@ def formatar_simbolo(celula: str) -> str:
 
     if celula == ROUTE:
         return "[bold magenta]*[/bold magenta]"
+
+    if celula == UNKNOWN:
+        return "[dim]?[/dim]"
+
+    if celula == SUSPECT_SLIME:
+        return "[bold green]G[/bold green]"
+
+    if celula == SUSPECT_SKELETON:
+        return "[bold red]C[/bold red]"
+
+    if celula == SUSPECT_BOTH:
+        return "[bold yellow]GC[/bold yellow]"
 
     return celula
 

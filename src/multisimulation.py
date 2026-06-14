@@ -9,6 +9,15 @@ from rich.panel import Panel
 
 from src.agent import aplicar_movimento
 from src.dungeon import Grid
+from src.mental_map import (
+    MapaMental,
+    calcular_custos_risco_mapa_mental,
+    contar_celulas_conhecidas,
+    criar_grid_planejamento,
+    criar_grid_visual_mapa_mental,
+    criar_mapa_mental_inicial,
+    atualizar_mapa_mental,
+)
 from src.mission import ResultadoMissao
 from src.planner import PlanoRota, escolher_melhor_minerio
 from src.render import console, criar_tabela_grid
@@ -32,6 +41,7 @@ class EstadoSimulacaoAlgoritmo:
     nome_exibicao: str
     algoritmo: str
     estado_atual: EstadoAgente
+    mapa_mental: Optional[MapaMental] = None
     plano_atual: Optional[PlanoRota] = None
     indice_proximo_passo: int = 0
     planos_executados: list[PlanoRota] | None = None
@@ -51,6 +61,7 @@ def criar_estado_simulacao_algoritmo(
     nome_exibicao: str,
     algoritmo: str,
     estado_inicial: EstadoAgente,
+    mapa_mental: Optional[MapaMental] = None,
 ) -> EstadoSimulacaoAlgoritmo:
     """
     Cria o estado visual inicial de um algoritmo.
@@ -59,7 +70,33 @@ def criar_estado_simulacao_algoritmo(
         nome_exibicao=nome_exibicao,
         algoritmo=algoritmo,
         estado_atual=estado_inicial,
+        mapa_mental=mapa_mental,
     )
+
+
+def _obter_grid_e_custos_planejamento(
+    estado_simulacao: EstadoSimulacaoAlgoritmo,
+    grid_real: Grid,
+):
+    """
+    Retorna o grid e os custos que o algoritmo pode usar para planejar.
+
+    Se houver mapa mental, o agente planeja sobre conhecimento parcial.
+    Se não houver, mantém o comportamento antigo usando o mapa real.
+    """
+    if estado_simulacao.mapa_mental is None:
+        return grid_real, None
+
+    grid_planejamento = criar_grid_planejamento(estado_simulacao.mapa_mental)
+
+    if estado_simulacao.algoritmo == "bfs":
+        return grid_planejamento, None
+
+    custos_extras = calcular_custos_risco_mapa_mental(
+        estado_simulacao.mapa_mental
+    )
+
+    return grid_planejamento, custos_extras
 
 
 def avancar_simulacao_algoritmo(
@@ -69,6 +106,9 @@ def avancar_simulacao_algoritmo(
 ) -> EstadoSimulacaoAlgoritmo:
     """
     Avança um único passo da simulação de um algoritmo.
+
+    Quando há mapa mental, o agente replana após cada passo, pois pode
+    descobrir novas paredes, paredes frágeis ou suspeitas de monstros.
     """
     if estado_simulacao.finalizado:
         return estado_simulacao
@@ -76,13 +116,19 @@ def avancar_simulacao_algoritmo(
     estado_atual = estado_simulacao.estado_atual
 
     if estado_simulacao.plano_atual is None:
+        grid_planejamento, custos_extras = _obter_grid_e_custos_planejamento(
+            estado_simulacao,
+            grid,
+        )
+
         plano = escolher_melhor_minerio(
-            grid=grid,
+            grid=grid_planejamento,
             posicao_inicial=estado_atual.posicao,
             picareta_melhorada=estado_atual.picareta_melhorada,
             ferro_disponivel=estado_atual.ferro,
             algoritmo=estado_simulacao.algoritmo,
             minerios_ignorados=estado_atual.minerios_coletados,
+            custos_extras=custos_extras,
         )
 
         if plano is None:
@@ -93,7 +139,9 @@ def avancar_simulacao_algoritmo(
 
         if plano.utilidade_estimada < utilidade_minima:
             estado_simulacao.finalizado = True
-            estado_simulacao.motivo_parada = "Próxima coleta não possui utilidade positiva."
+            estado_simulacao.motivo_parada = (
+                "Próxima coleta não possui utilidade positiva."
+            )
             estado_simulacao.logs.append(estado_simulacao.motivo_parada)
             return estado_simulacao
 
@@ -129,6 +177,17 @@ def avancar_simulacao_algoritmo(
     estado_simulacao.indice_proximo_passo += 1
     estado_simulacao.logs.append(f"Moveu para {proxima_posicao}")
 
+    if estado_simulacao.mapa_mental is not None:
+        estado_simulacao.mapa_mental = atualizar_mapa_mental(
+            mapa_mental=estado_simulacao.mapa_mental,
+            grid_real=grid,
+            posicao_atual=novo_estado.posicao,
+        )
+        estado_simulacao.logs.append("Mapa mental atualizado.")
+        estado_simulacao.plano_atual = None
+        estado_simulacao.indice_proximo_passo = 0
+        return estado_simulacao
+
     if estado_simulacao.indice_proximo_passo >= len(caminho):
         estado_simulacao.logs.append(f"Coleta concluída em {novo_estado.posicao}")
         estado_simulacao.plano_atual = None
@@ -159,6 +218,12 @@ def criar_linhas_estado_algoritmo(
         f"Coletas: {len(estado.minerios_coletados)}",
     ]
 
+    if estado_simulacao.mapa_mental is not None:
+        linhas.append(
+            f"Células conhecidas: "
+            f"{contar_celulas_conhecidas(estado_simulacao.mapa_mental)}"
+        )
+
     if estado_simulacao.finalizado:
         linhas.append("Status: finalizado")
     else:
@@ -179,12 +244,20 @@ def criar_painel_algoritmo(
     if estado_simulacao.plano_atual is not None:
         caminho_planejado = estado_simulacao.plano_atual.resultado_busca.caminho
 
-    grid_visual = criar_grid_simulacao(
-        grid=grid,
-        posicao_agente=estado_simulacao.estado_atual.posicao,
-        caminho_percorrido=estado_simulacao.estado_atual.caminho,
-        caminho_planejado=caminho_planejado,
-    )
+    if estado_simulacao.mapa_mental is not None:
+        grid_visual = criar_grid_visual_mapa_mental(
+            mapa_mental=estado_simulacao.mapa_mental,
+            posicao_agente=estado_simulacao.estado_atual.posicao,
+            caminho_percorrido=estado_simulacao.estado_atual.caminho,
+            caminho_planejado=caminho_planejado,
+        )
+    else:
+        grid_visual = criar_grid_simulacao(
+            grid=grid,
+            posicao_agente=estado_simulacao.estado_atual.posicao,
+            caminho_percorrido=estado_simulacao.estado_atual.caminho,
+            caminho_planejado=caminho_planejado,
+        )
 
     tabela = criar_tabela_grid(grid_visual, estado_simulacao.nome_exibicao)
 
@@ -225,7 +298,7 @@ def criar_tela_comparativa(
     return Group(
         Panel.fit(
             "[bold cyan]Simulação Comparativa[/bold cyan]\n"
-            "BFS, UCS e A* tentando coletar minérios com utilidade positiva.",
+            "BFS, UCS e A* usando mapa mental e conhecimento parcial.",
             border_style="cyan",
         ),
         Columns(paineis, equal=True, expand=True),
@@ -250,11 +323,29 @@ def simular_algoritmos_visual(
 ) -> Tuple[ResultadoSimulacaoAlgoritmo, ...]:
     """
     Executa BFS, UCS e A* lado a lado em tempo real.
+
+    Cada algoritmo recebe seu próprio mapa mental, começando apenas com a
+    bússola dos minérios e atualizando o conhecimento conforme anda.
     """
     estados_simulacao = (
-        criar_estado_simulacao_algoritmo("BFS", "bfs", estado_inicial),
-        criar_estado_simulacao_algoritmo("UCS", "ucs", estado_inicial),
-        criar_estado_simulacao_algoritmo("A*", "a_estrela", estado_inicial),
+        criar_estado_simulacao_algoritmo(
+            "BFS",
+            "bfs",
+            estado_inicial,
+            criar_mapa_mental_inicial(grid, estado_inicial.posicao),
+        ),
+        criar_estado_simulacao_algoritmo(
+            "UCS",
+            "ucs",
+            estado_inicial,
+            criar_mapa_mental_inicial(grid, estado_inicial.posicao),
+        ),
+        criar_estado_simulacao_algoritmo(
+            "A*",
+            "a_estrela",
+            estado_inicial,
+            criar_mapa_mental_inicial(grid, estado_inicial.posicao),
+        ),
     )
 
     with Live(

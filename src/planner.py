@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from typing import Callable, Optional, Tuple
+from typing import Callable, Mapping, Optional, Tuple
 
 from src.dungeon import Grid, Position, get_cell, get_ore_value, is_ore
 from src.search import ResultadoBusca, busca_a_estrela, busca_bfs, busca_ucs
 
 
 Minerios = Tuple[Position, ...]
+CustosExtras = Optional[Mapping[Position, int]]
 
 
 @dataclass(frozen=True)
@@ -67,6 +68,7 @@ def escolher_melhor_minerio(
     ferro_disponivel: int = 0,
     algoritmo: str = "a_estrela",
     minerios_ignorados: Minerios = (),
+    custos_extras: CustosExtras = None,
 ) -> Optional[PlanoRota]:
     """
     Escolhe o melhor minério para o agente buscar.
@@ -96,6 +98,7 @@ def escolher_melhor_minerio(
             posicao_objetivo=posicao_minerio,
             picareta_melhorada=picareta_melhorada,
             ferro_inicial=ferro_disponivel,
+            custos_extras=custos_extras,
         )
 
         if not resultado.encontrou:

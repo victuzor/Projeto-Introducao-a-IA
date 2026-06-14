@@ -1,7 +1,7 @@
 from collections import deque
 from dataclasses import dataclass
 from heapq import heappop, heappush
-from typing import Optional, Tuple
+from typing import Mapping, Optional, Tuple
 
 from src.actions import get_valid_moves
 from src.agent import calcular_penalidade_celula
@@ -10,6 +10,7 @@ from src.risk import calcular_custo_percepcao
 
 
 Caminho = Tuple[Position, ...]
+CustosExtras = Optional[Mapping[Position, int]]
 
 CUSTO_MOVIMENTO_PADRAO = 1
 CUSTO_QUEBRAR_PAREDE_FRAGIL = 1
@@ -71,7 +72,11 @@ def criar_estado_planejamento_inicial(
     )
 
 
-def calcular_custo_movimento(grid: Grid, posicao_destino: Position) -> int:
+def calcular_custo_movimento(
+    grid: Grid,
+    posicao_destino: Position,
+    custos_extras: CustosExtras = None,
+) -> int:
     """
     Calcula o custo de entrar em uma célula.
 
@@ -79,15 +84,19 @@ def calcular_custo_movimento(grid: Grid, posicao_destino: Position) -> int:
     - Todo movimento custa 1.
 
     Custos extras:
-    - Entrar em slime ou esqueleto adiciona penalidade direta.
-    - Entrar em parede frágil adiciona custo extra.
-    - Entrar em célula com percepção de gosma/crack adiciona custo de risco.
+    - Entrar em slime ou esqueleto adiciona penalidade direta;
+    - Entrar em parede frágil adiciona custo extra;
+    - Entrar em célula com percepção de gosma/crack adiciona custo de risco;
+    - Entrar em célula suspeita no mapa mental pode adicionar custo extra.
     """
     celula = get_cell(grid, posicao_destino)
 
     custo = CUSTO_MOVIMENTO_PADRAO
     custo += calcular_penalidade_celula(celula)
     custo += calcular_custo_percepcao(grid, posicao_destino)
+
+    if custos_extras is not None:
+        custo += custos_extras.get(posicao_destino, 0)
 
     if celula == FRAGILE_WALL:
         custo += CUSTO_QUEBRAR_PAREDE_FRAGIL
@@ -152,6 +161,7 @@ def busca_bfs(
     posicao_objetivo: Position,
     picareta_melhorada: bool = False,
     ferro_inicial: int = 0,
+    custos_extras: CustosExtras = None,
 ) -> ResultadoBusca:
     """
     Executa BFS para encontrar o menor caminho em quantidade de passos.
@@ -210,6 +220,7 @@ def busca_ucs(
     posicao_objetivo: Position,
     picareta_melhorada: bool = False,
     ferro_inicial: int = 0,
+    custos_extras: CustosExtras = None,
 ) -> ResultadoBusca:
     """
     Executa UCS considerando custo, ferro, picareta e percepções de risco.
@@ -263,7 +274,11 @@ def busca_ucs(
                 nova_posicao=proxima_posicao,
             )
 
-            custo_movimento = calcular_custo_movimento(grid, proxima_posicao)
+            custo_movimento = calcular_custo_movimento(
+                grid,
+                proxima_posicao,
+                custos_extras=custos_extras,
+            )
             novo_custo = custo_atual + custo_movimento
 
             if novo_custo < melhores_custos.get(novo_estado, float("inf")):
@@ -291,6 +306,7 @@ def busca_a_estrela(
     posicao_objetivo: Position,
     picareta_melhorada: bool = False,
     ferro_inicial: int = 0,
+    custos_extras: CustosExtras = None,
 ) -> ResultadoBusca:
     """
     Executa A* considerando custo, ferro, picareta, percepções e heurística.
@@ -360,7 +376,11 @@ def busca_a_estrela(
                 nova_posicao=proxima_posicao,
             )
 
-            custo_movimento = calcular_custo_movimento(grid, proxima_posicao)
+            custo_movimento = calcular_custo_movimento(
+                grid,
+                proxima_posicao,
+                custos_extras=custos_extras,
+            )
             novo_custo = custo_atual + custo_movimento
 
             if novo_custo < melhores_custos.get(novo_estado, float("inf")):
