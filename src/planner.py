@@ -10,6 +10,9 @@ Minerios = Tuple[Position, ...]
 
 @dataclass(frozen=True)
 class PlanoRota:
+    """
+    Representa uma rota planejada pelo agente até um minério.
+    """
 
     alvo: Position
     valor_alvo: int
@@ -18,6 +21,9 @@ class PlanoRota:
 
 
 def localizar_minerios(grid: Grid) -> Minerios:
+    """
+    Localiza todos os minérios existentes no mapa.
+    """
     minerios = []
 
     for linha_indice, linha in enumerate(grid):
@@ -29,10 +35,19 @@ def localizar_minerios(grid: Grid) -> Minerios:
 
 
 def calcular_utilidade_rota(valor_alvo: int, custo_rota: int) -> int:
+    """
+    Calcula a utilidade estimada de uma rota.
+
+    Quanto maior o valor do minério e menor o custo da rota,
+    melhor será a utilidade.
+    """
     return valor_alvo - custo_rota
 
 
 def obter_algoritmo_busca(algoritmo: str) -> Callable:
+    """
+    Retorna a função de busca escolhida pelo nome.
+    """
     if algoritmo == "bfs":
         return busca_bfs
 
@@ -50,13 +65,27 @@ def escolher_melhor_minerio(
     posicao_inicial: Position,
     picareta_melhorada: bool = False,
     algoritmo: str = "a_estrela",
+    minerios_ignorados: Minerios = (),
 ) -> Optional[PlanoRota]:
+    """
+    Escolhe o melhor minério para o agente buscar.
+
+    O agente avalia todos os minérios conhecidos no mapa.
+    Para cada minério, ele calcula uma rota usando o algoritmo escolhido.
+    Depois, escolhe o minério com maior utilidade estimada.
+
+    Minérios ignorados são aqueles que já foram coletados.
+    """
     minerios = localizar_minerios(grid)
+    minerios_ignorados_set = set(minerios_ignorados)
     funcao_busca = obter_algoritmo_busca(algoritmo)
 
     melhor_plano = None
 
     for posicao_minerio in minerios:
+        if posicao_minerio in minerios_ignorados_set:
+            continue
+
         celula = get_cell(grid, posicao_minerio)
         valor_minerio = get_ore_value(celula)
 

@@ -139,3 +139,26 @@ def test_escolher_melhor_minerio_ignora_minerio_inacessivel():
     )
 
     assert plano is None
+
+
+def test_escolher_melhor_minerio_ignora_minerio_ja_coletado():
+    dungeon = [
+        [AGENT, GOLD, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, GOLD, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+    ]
+
+    plano = escolher_melhor_minerio(
+        dungeon,
+        posicao_inicial=(0, 0),
+        algoritmo="a_estrela",
+        minerios_ignorados=((0, 1),),
+    )
+
+    assert plano is not None
+    assert plano.alvo == (1, 1)
