@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from time import sleep
+from time import perf_counter, sleep
 from typing import Optional, Tuple
 
 from rich.columns import Columns
@@ -8,7 +8,7 @@ from rich.live import Live
 from rich.panel import Panel
 
 from src.agent import aplicar_movimento
-from src.dungeon import Grid
+from src.dungeon import Grid, get_perceptions
 from src.mental_map import (
     MapaMental,
     calcular_custos_risco_mapa_mental,
@@ -30,6 +30,10 @@ from src.state import EstadoAgente
 class ResultadoSimulacaoAlgoritmo:
     algoritmo: str
     resultado_missao: ResultadoMissao
+    total_nos_expandidos: int = 0
+    total_tempo_planejamento: float = 0.0
+    total_custo_planejado: int = 0
+    quantidade_replanejamentos: int = 0
 
 
 @dataclass
@@ -48,6 +52,10 @@ class EstadoSimulacaoAlgoritmo:
     logs: list[str] | None = None
     finalizado: bool = False
     motivo_parada: str = ""
+    total_nos_expandidos: int = 0
+    total_tempo_planejamento: float = 0.0
+    total_custo_planejado: int = 0
+    quantidade_replanejamentos: int = 0
 
     def __post_init__(self):
         if self.planos_executados is None:
@@ -99,6 +107,20 @@ def _obter_grid_e_custos_planejamento(
     return grid_planejamento, custos_extras
 
 
+def _registrar_metricas_planejamento(
+    estado_simulacao: EstadoSimulacaoAlgoritmo,
+    plano: PlanoRota,
+    tempo_planejamento: float,
+) -> None:
+    """
+    Acumula métricas computacionais do planejamento.
+    """
+    estado_simulacao.quantidade_replanejamentos += 1
+    estado_simulacao.total_tempo_planejamento += tempo_planejamento
+    estado_simulacao.total_custo_planejado += plano.resultado_busca.custo
+    estado_simulacao.total_nos_expandidos += plano.nos_expandidos_planejamento
+
+
 def avancar_simulacao_algoritmo(
     grid: Grid,
     estado_simulacao: EstadoSimulacaoAlgoritmo,
@@ -121,6 +143,8 @@ def avancar_simulacao_algoritmo(
             grid,
         )
 
+        inicio_planejamento = perf_counter()
+
         plano = escolher_melhor_minerio(
             grid=grid_planejamento,
             posicao_inicial=estado_atual.posicao,
@@ -131,11 +155,21 @@ def avancar_simulacao_algoritmo(
             custos_extras=custos_extras,
         )
 
+        tempo_planejamento = perf_counter() - inicio_planejamento
+
         if plano is None:
+            estado_simulacao.quantidade_replanejamentos += 1
+            estado_simulacao.total_tempo_planejamento += tempo_planejamento
             estado_simulacao.finalizado = True
             estado_simulacao.motivo_parada = "Não há mais minérios acessíveis."
             estado_simulacao.logs.append(estado_simulacao.motivo_parada)
             return estado_simulacao
+
+        _registrar_metricas_planejamento(
+            estado_simulacao=estado_simulacao,
+            plano=plano,
+            tempo_planejamento=tempo_planejamento,
+        )
 
         if plano.utilidade_estimada < utilidade_minima:
             estado_simulacao.finalizado = True
@@ -151,9 +185,9 @@ def avancar_simulacao_algoritmo(
 
         estado_simulacao.logs.append(
             f"Novo alvo {plano.alvo} | "
-            f"valor={plano.valor_alvo} | "
             f"custo={plano.resultado_busca.custo} | "
-            f"utilidade={plano.utilidade_estimada}"
+            f"nós={plano.nos_expandidos_planejamento} | "
+            f"tempo={tempo_planejamento:.6f}s"
         )
 
         return estado_simulacao
@@ -197,6 +231,7 @@ def avancar_simulacao_algoritmo(
 
 
 def criar_linhas_estado_algoritmo(
+    grid: Grid,
     estado_simulacao: EstadoSimulacaoAlgoritmo,
 ) -> list[str]:
     """
@@ -205,9 +240,11 @@ def criar_linhas_estado_algoritmo(
     estado = estado_simulacao.estado_atual
     score = calcular_score(estado)
     picareta = "melhorada" if estado.picareta_melhorada else "básica"
+    percepcoes = get_perceptions(grid, estado.posicao)
 
     linhas = [
         f"Posição: {estado.posicao}",
+        f"Percepções: {percepcoes}",
         f"Passos: {estado.passos}",
         f"Dinheiro: {estado.dinheiro}",
         f"Ferro: {estado.ferro}",
@@ -216,6 +253,9 @@ def criar_linhas_estado_algoritmo(
         f"Custo risco: {estado.custo_risco}",
         f"Score: {score.score_final}",
         f"Coletas: {len(estado.minerios_coletados)}",
+        f"Nós expandidos: {estado_simulacao.total_nos_expandidos}",
+        f"Replanejamentos: {estado_simulacao.quantidade_replanejamentos}",
+        f"Tempo plan.: {estado_simulacao.total_tempo_planejamento:.6f}s",
     ]
 
     if estado_simulacao.mapa_mental is not None:
@@ -262,7 +302,7 @@ def criar_painel_algoritmo(
     tabela = criar_tabela_grid(grid_visual, estado_simulacao.nome_exibicao)
 
     painel_estado = Panel(
-        "\n".join(criar_linhas_estado_algoritmo(estado_simulacao)),
+        "\n".join(criar_linhas_estado_algoritmo(grid, estado_simulacao)),
         title="Estado",
         border_style="green",
     )
@@ -298,7 +338,7 @@ def criar_tela_comparativa(
     return Group(
         Panel.fit(
             "[bold cyan]Simulação Comparativa[/bold cyan]\n"
-            "BFS, UCS e A* usando mapa mental e conhecimento parcial.",
+            "BFS, UCS e A* usando mapa mental, replanejamento e métricas.",
             border_style="cyan",
         ),
         Columns(paineis, equal=True, expand=True),
@@ -391,6 +431,10 @@ def simular_algoritmos_visual(
             ResultadoSimulacaoAlgoritmo(
                 algoritmo=estado_simulacao.nome_exibicao,
                 resultado_missao=resultado_missao,
+                total_nos_expandidos=estado_simulacao.total_nos_expandidos,
+                total_tempo_planejamento=estado_simulacao.total_tempo_planejamento,
+                total_custo_planejado=estado_simulacao.total_custo_planejado,
+                quantidade_replanejamentos=estado_simulacao.quantidade_replanejamentos,
             )
         )
 

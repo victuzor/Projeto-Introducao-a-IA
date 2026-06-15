@@ -1,7 +1,8 @@
 from typing import Callable, Tuple
 
 from rich import box
-from rich.console import Console
+from rich.columns import Columns
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.table import Table
 
@@ -68,13 +69,13 @@ def formatar_simbolo(celula: str) -> str:
         return "[dim]?[/dim]"
 
     if celula == SUSPECT_SLIME:
-        return "[bold green]G[/bold green]"
+        return "[bold green]S?[/bold green]"
 
     if celula == SUSPECT_SKELETON:
-        return "[bold red]C[/bold red]"
+        return "[bold red]E?[/bold red]"
 
     if celula == SUSPECT_BOTH:
-        return "[bold yellow]GC[/bold yellow]"
+        return "[bold yellow]!?[/bold yellow]"
 
     return celula
 
@@ -98,6 +99,80 @@ def criar_tabela_grid(grid: Grid, titulo: str) -> Table:
         table.add_row(*[formatar_simbolo(cell) for cell in row])
 
     return table
+
+
+def criar_grid_percepcoes(grid: Grid) -> Grid:
+    """
+    Cria um grid separado mostrando as percepções do mundo.
+
+    G = gosma próxima, indicando slime vizinho.
+    C = crack próximo, indicando esqueleto vizinho.
+    GC = gosma e crack na mesma célula.
+    """
+    perception_grid = []
+
+    for row_index, row in enumerate(grid):
+        perception_row = []
+
+        for col_index, cell in enumerate(row):
+            position = (row_index, col_index)
+
+            if cell == SLIME:
+                symbol = SLIME
+            elif cell == SKELETON:
+                symbol = SKELETON
+            else:
+                perceptions = get_perceptions(grid, position)
+
+                symbol_parts = []
+
+                if GOO_PERCEPTION in perceptions:
+                    symbol_parts.append("G")
+
+                if CRACK_PERCEPTION in perceptions:
+                    symbol_parts.append("C")
+
+                if symbol_parts:
+                    symbol = "".join(symbol_parts)
+                else:
+                    symbol = EMPTY
+
+            perception_row.append(symbol)
+
+        perception_grid.append(perception_row)
+
+    return perception_grid
+
+
+def criar_painel_legenda_mundo() -> Panel:
+    """
+    Cria a legenda geral dos símbolos usados na visualização.
+    """
+    linhas = [
+        "[bold cyan]A[/bold cyan] = agente",
+        "[dim].[/dim] = célula livre/conhecida",
+        "[dim]?[/dim] = célula desconhecida no mapa mental",
+        "[white]#[/white] = parede comum",
+        "[yellow]X[/yellow] = parede frágil",
+        "[bright_white]Fe[/bright_white] = ferro, valor 10",
+        "[orange3]Cu[/orange3] = cobre, valor 20",
+        "[bold yellow]Au[/bold yellow] = ouro, valor 50",
+        "[green]S[/green] = slime",
+        "[red]E[/red] = esqueleto",
+        "[bold magenta]*[/bold magenta] = caminho planejado ou percorrido",
+        "[bold green]S?[/bold green] = suspeita de slime no mapa mental",
+        "[bold red]E?[/bold red] = suspeita de esqueleto no mapa mental",
+        "[bold yellow]!?[/bold yellow] = suspeita de slime ou esqueleto",
+        "[green]G[/green] = gosma próxima no mapa de percepções",
+        "[red]C[/red] = crack próximo no mapa de percepções",
+        "[bold yellow]GC[/bold yellow] = gosma e crack na mesma célula",
+    ]
+
+    return Panel(
+        "\n".join(linhas),
+        title="Legenda",
+        border_style="magenta",
+    )
 
 
 def render_titulo() -> None:
@@ -124,45 +199,51 @@ def render_grid(grid: Grid) -> None:
 def render_perception_grid(grid: Grid) -> None:
     """
     Exibe um mapa separado mostrando onde existem percepções.
-
-    G = gosma próxima, indicando slime vizinho
-    C = crack próximo, indicando esqueleto vizinho
     """
-    perception_grid = []
-
-    for row_index, row in enumerate(grid):
-        perception_row = []
-
-        for col_index, cell in enumerate(row):
-            position = (row_index, col_index)
-
-            if cell == SLIME:
-                symbol = "S"
-            elif cell == SKELETON:
-                symbol = "E"
-            else:
-                perceptions = get_perceptions(grid, position)
-
-                symbol_parts = []
-
-                if GOO_PERCEPTION in perceptions:
-                    symbol_parts.append("G")
-
-                if CRACK_PERCEPTION in perceptions:
-                    symbol_parts.append("C")
-
-                if symbol_parts:
-                    symbol = "".join(symbol_parts)
-                else:
-                    symbol = EMPTY
-
-            perception_row.append(symbol)
-
-        perception_grid.append(perception_row)
-
+    perception_grid = criar_grid_percepcoes(grid)
     table = criar_tabela_grid(perception_grid, "Mapa de Percepções")
     console.print(table)
     console.print("[dim]Legenda: G = gosma próxima | C = crack próximo[/dim]")
+
+
+def render_mundo_e_percepcoes(grid: Grid) -> None:
+    """
+    Exibe a dungeon real e o mapa de percepções lado a lado,
+    com a legenda geral embaixo.
+    """
+    tabela_dungeon = criar_tabela_grid(grid, "Dungeon 8x8")
+    tabela_percepcoes = criar_tabela_grid(
+        criar_grid_percepcoes(grid),
+        "Mapa de Percepções",
+    )
+
+    conteudo = Group(
+        Columns(
+            [
+                Panel(
+                    tabela_dungeon,
+                    title="Mapa Real",
+                    border_style="cyan",
+                ),
+                Panel(
+                    tabela_percepcoes,
+                    title="Percepções",
+                    border_style="cyan",
+                ),
+            ],
+            equal=True,
+            expand=False,
+        ),
+        criar_painel_legenda_mundo(),
+    )
+
+    console.print(
+        Panel(
+            conteudo,
+            title="Visualização Inicial do Mundo",
+            border_style="blue",
+        )
+    )
 
 
 def criar_grid_com_caminho(grid: Grid, caminho: Caminho) -> Grid:

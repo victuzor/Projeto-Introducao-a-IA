@@ -13,12 +13,16 @@ CustosExtras = Optional[Mapping[Position, int]]
 class PlanoRota:
     """
     Representa uma rota planejada pelo agente até um minério.
+
+    nos_expandidos_planejamento representa o total de nós expandidos
+    para avaliar todos os minérios candidatos naquele momento.
     """
 
     alvo: Position
     valor_alvo: int
     resultado_busca: ResultadoBusca
     utilidade_estimada: int
+    nos_expandidos_planejamento: int = 0
 
 
 def localizar_minerios(grid: Grid) -> Minerios:
@@ -83,7 +87,11 @@ def escolher_melhor_minerio(
     minerios_ignorados_set = set(minerios_ignorados)
     funcao_busca = obter_algoritmo_busca(algoritmo)
 
-    melhor_plano = None
+    melhor_alvo = None
+    melhor_valor = 0
+    melhor_resultado = None
+    melhor_utilidade = 0
+    total_nos_expandidos = 0
 
     for posicao_minerio in minerios:
         if posicao_minerio in minerios_ignorados_set:
@@ -101,6 +109,8 @@ def escolher_melhor_minerio(
             custos_extras=custos_extras,
         )
 
+        total_nos_expandidos += resultado.nos_expandidos
+
         if not resultado.encontrou:
             continue
 
@@ -109,18 +119,19 @@ def escolher_melhor_minerio(
             custo_rota=resultado.custo,
         )
 
-        plano = PlanoRota(
-            alvo=posicao_minerio,
-            valor_alvo=valor_minerio,
-            resultado_busca=resultado,
-            utilidade_estimada=utilidade,
-        )
+        if melhor_resultado is None or utilidade > melhor_utilidade:
+            melhor_alvo = posicao_minerio
+            melhor_valor = valor_minerio
+            melhor_resultado = resultado
+            melhor_utilidade = utilidade
 
-        if melhor_plano is None:
-            melhor_plano = plano
-            continue
+    if melhor_resultado is None or melhor_alvo is None:
+        return None
 
-        if plano.utilidade_estimada > melhor_plano.utilidade_estimada:
-            melhor_plano = plano
-
-    return melhor_plano
+    return PlanoRota(
+        alvo=melhor_alvo,
+        valor_alvo=melhor_valor,
+        resultado_busca=melhor_resultado,
+        utilidade_estimada=melhor_utilidade,
+        nos_expandidos_planejamento=total_nos_expandidos,
+    )

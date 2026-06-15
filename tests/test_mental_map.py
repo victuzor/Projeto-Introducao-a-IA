@@ -3,6 +3,7 @@ from src.dungeon import (
     EMPTY,
     FRAGILE_WALL,
     GOLD,
+    GRID_SIZE,
     IRON,
     SKELETON,
     SLIME,
@@ -11,6 +12,7 @@ from src.dungeon import (
 )
 from src.mental_map import (
     CUSTO_CELULA_DESCONHECIDA,
+    CUSTO_SUSPEITA_SLIME,
     SUSPECT_SLIME,
     UNKNOWN,
     atualizar_mapa_mental,
@@ -20,7 +22,10 @@ from src.mental_map import (
     criar_grid_visual_mapa_mental,
     criar_mapa_mental_inicial,
 )
-from src.risk import CUSTO_PERCEPCAO_GOSMA
+
+
+def criar_grid_vazio():
+    return [[EMPTY for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
 
 
 def test_mapa_mental_inicial_conhece_minerios_e_posicao_inicial():
@@ -49,6 +54,32 @@ def test_atualizar_mapa_mental_revela_parede_adjacente():
 
     assert mapa.celulas_conhecidas[0][3] == FRAGILE_WALL
     assert mapa.celulas_conhecidas[1][2] == EMPTY
+
+
+def test_atualizar_mapa_mental_nao_revela_casas_vazias_quando_ha_risco():
+    dungeon = criar_grid_vazio()
+    dungeon[3][3] = AGENT
+    dungeon[3][4] = SLIME
+
+    mapa = criar_mapa_mental_inicial(dungeon, (3, 3))
+
+    assert mapa.celulas_conhecidas[2][3] == UNKNOWN
+    assert mapa.celulas_conhecidas[4][3] == UNKNOWN
+    assert mapa.celulas_conhecidas[3][2] == UNKNOWN
+    assert mapa.celulas_conhecidas[3][4] == UNKNOWN
+
+
+def test_atualizar_mapa_mental_marca_todos_vizinhos_desconhecidos_como_suspeitos():
+    dungeon = criar_grid_vazio()
+    dungeon[3][3] = AGENT
+    dungeon[3][4] = SLIME
+
+    mapa = criar_mapa_mental_inicial(dungeon, (3, 3))
+
+    assert (2, 3) in mapa.suspeita_slime
+    assert (4, 3) in mapa.suspeita_slime
+    assert (3, 2) in mapa.suspeita_slime
+    assert (3, 4) in mapa.suspeita_slime
 
 
 def test_atualizar_mapa_mental_revela_slime_quando_agente_pisa_nele():
@@ -114,7 +145,7 @@ def test_calcular_custos_risco_mapa_mental_acumula_incerteza_e_suspeita():
 
     custos = calcular_custos_risco_mapa_mental(mapa)
 
-    assert custos[(0, 6)] == CUSTO_CELULA_DESCONHECIDA + CUSTO_PERCEPCAO_GOSMA
+    assert custos[(0, 6)] == CUSTO_CELULA_DESCONHECIDA + CUSTO_SUSPEITA_SLIME
 
 
 def test_calcular_custos_risco_mapa_mental():
@@ -139,7 +170,7 @@ def test_criar_grid_visual_mapa_mental_exibe_suspeitas():
 
     simbolos = {celula for linha in grid_visual for celula in linha}
 
-    assert SUSPECT_SLIME in simbolos or "GC" in simbolos
+    assert SUSPECT_SLIME in simbolos or "!?" in simbolos
 
 
 def test_contar_celulas_conhecidas():

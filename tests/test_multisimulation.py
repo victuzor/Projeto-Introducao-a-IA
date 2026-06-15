@@ -1,4 +1,5 @@
 from src.dungeon import AGENT, EMPTY, IRON
+from src.mental_map import criar_mapa_mental_inicial
 from src.multisimulation import (
     avancar_simulacao_algoritmo,
     criar_estado_simulacao_algoritmo,
@@ -34,6 +35,8 @@ def test_criar_estado_simulacao_algoritmo():
     assert simulacao.algoritmo == "a_estrela"
     assert simulacao.estado_atual == estado
     assert simulacao.finalizado is False
+    assert simulacao.total_nos_expandidos == 0
+    assert simulacao.quantidade_replanejamentos == 0
 
 
 def test_avancar_simulacao_algoritmo_cria_plano():
@@ -45,6 +48,19 @@ def test_avancar_simulacao_algoritmo_cria_plano():
 
     assert simulacao.plano_atual is not None
     assert simulacao.plano_atual.alvo == (0, 1)
+
+
+def test_avancar_simulacao_algoritmo_registra_metricas_planejamento():
+    dungeon = criar_grid_simples()
+    estado = criar_estado_inicial((0, 0))
+    simulacao = criar_estado_simulacao_algoritmo("A*", "a_estrela", estado)
+
+    avancar_simulacao_algoritmo(dungeon, simulacao)
+
+    assert simulacao.quantidade_replanejamentos == 1
+    assert simulacao.total_nos_expandidos > 0
+    assert simulacao.total_tempo_planejamento >= 0
+    assert simulacao.total_custo_planejado >= 0
 
 
 def test_avancar_simulacao_algoritmo_move_agente():
@@ -60,15 +76,39 @@ def test_avancar_simulacao_algoritmo_move_agente():
     assert simulacao.estado_atual.minerios_coletados == ((0, 1),)
 
 
+def test_avancar_simulacao_com_mapa_mental_replana_apos_movimento():
+    dungeon = criar_grid_simples()
+    estado = criar_estado_inicial((0, 0))
+    mapa = criar_mapa_mental_inicial(dungeon, (0, 0))
+
+    simulacao = criar_estado_simulacao_algoritmo(
+        nome_exibicao="UCS",
+        algoritmo="ucs",
+        estado_inicial=estado,
+        mapa_mental=mapa,
+    )
+
+    avancar_simulacao_algoritmo(dungeon, simulacao)
+    avancar_simulacao_algoritmo(dungeon, simulacao)
+
+    assert simulacao.estado_atual.posicao == (0, 1)
+    assert simulacao.mapa_mental is not None
+    assert simulacao.plano_atual is None
+
+
 def test_criar_linhas_estado_algoritmo():
+    dungeon = criar_grid_simples()
     estado = criar_estado_inicial((0, 0))
     simulacao = criar_estado_simulacao_algoritmo("BFS", "bfs", estado)
 
-    linhas = criar_linhas_estado_algoritmo(simulacao)
+    linhas = criar_linhas_estado_algoritmo(dungeon, simulacao)
 
     assert "Posição: (0, 0)" in linhas
+    assert "Percepções: []" in linhas
     assert "Passos: 0" in linhas
     assert "Score: 0" in linhas
+    assert "Nós expandidos: 0" in linhas
+    assert "Replanejamentos: 0" in linhas
 
 
 def test_todos_finalizados():
